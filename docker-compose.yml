@@ -1,0 +1,28 @@
+#docker-compose.yml
+
+version: '3'
+
+services:
+  reverse-proxy: #proxy service defined here that having properties of image command ports volumes
+    image: traefik:v1.7 # The official Traefik docker image form dockerhub
+    command: --api --docker # Enables the web UI and tells Traefik to listen to docker
+    ports: #defining ports that which traefik allow inside 80 for webport reading and 8080 for webgui to check the docker containers in the dashboard
+      - "80:80"     # The HTTP port
+      - "8080:8080" # The Web UI (enabled by --api)
+    volumes: # this volume directly mounted to docker socket so traefik will get to know if any changes or container creation or deletion has been done .
+      - /var/run/docker.sock:/var/run/docker.sock
+
+# this service for whoami its a api that fetch the conatiner results of ip address and hostname   
+  whoami:
+    image: containous/whoami # A container that exposes an API to show its IP address
+    # attaching a label that describes adding reverse-proxy to this container
+    labels:
+      - "traefik.frontend.rule=Host:whoami.docker.localhost"
+
+# finall webserver attached the lables with port network and reverse-proxy
+  webserver:
+    image: nginx
+    labels:
+      - "traefik.frontend.rule=Host:examplehttp.localhost"
+      - "traefik.port=80"
+      - "traefik.network=traefik_default"
